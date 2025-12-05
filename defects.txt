@@ -1,0 +1,74 @@
+Defects report - Dependency & onboarding verification
+
+Repository: v-danlingyin_25_12_05_case
+Date: 2025-12-05
+Environment:
+- OS: Windows
+- Node: v24.11.1
+- pnpm: v10.24.0
+
+Summary of findings (high-level):
+- `pnpm install` completed successfully.
+- `pnpm build` fails: Rollup/Vite cannot resolve entry module "index.html".
+- `pnpm dev` can start a dev server (Vite) in dev mode but was not stable in this run; overall the application has no `index.html` at the project root and this prevents production build.
+- There is NO `test` script defined in `package.json`.
+
+Reproduction steps (exact commands run):
+1) pnpm install
+   - Result: success. Warning about ignored build scripts for esbuild.
+
+2) pnpm build
+   - Result: FAILED
+   - Error (full captured trace):
+
+> react-ts-demo@0.0.1 build C:\Users\v-danlingyin\Documents\microsoft projects files\1205\v-danlingyin_25_12_05_case
+> vite build
+
+vite v4.1.0 building for production...
+[32m 0 modules transformed.[39m
+Could not resolve entry module "index.html".
+error during build:
+RollupError: Could not resolve entry module "index.html".
+    at error (file:///C:/Users/v-danlingyin/Documents/microsoft%20projects%20files/1205/v-danlingyin_25_12_05_case/node_modules/.pnpm/rollup@3.29.5/node_modules/rollup/dist/es/shared/node-entry.js:2287:30)
+    at ModuleLoader.loadEntryModule (file:///C:/Users/v-danlingyin/Documents/microsoft%20projects%20files/1205/v-danlingyin_25_12_05_case/node_modules/.pnpm/rollup@3.29.5/node_modules/rollup/dist/es/shared/node-entry.js:24881:20)
+    at async Promise.all (index 0)
+
+Exit code: 1
+
+3) pnpm test
+   - Result: FAILED/Not found
+   - Observations: `package.json` has no `test` script. Running `pnpm test` shows "Command 'test' not found" / `ERR_PNPM_RECURSIVE_EXEC_FIRST_FAIL`.
+
+4) pnpm dev
+   - Result: In dev mode Vite started and served on http://localhost:5173/ (reported ready), but the server was not reachable from the powershell client in this run after running other commands. Dev mode appears to work locally when launched exclusively.
+
+Files checked:
+- `package.json` scripts: only `dev`, `build`, `preview` present — no `test`.
+- No `index.html` found at the repository root (checked recursively).
+
+Impact & recommendations:
+- High: Production build is blocked because `index.html` is missing. Add an `index.html` at project root following Vite conventions or set `root` in `vite.config.ts` to point to a directory that contains `index.html`.
+- Medium: Add a `test` script (e.g., using vitest or jest) to allow CI / local `pnpm test` verification steps.
+- Suggestion: Add an explicit `check` script for onboarding e.g., `check: installs, build, lint` and add list of required Node / pnpm versions to README.
+
+Suggested minimal `index.html` to fix build (place at repository root):
+
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>React + Vite</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
+Full reproduction notes and next steps are in `corrected_readme.md` and `obsolete_warnings.md` to be generated next if you want me to continue with upgrades and fixes.
+
+Update (2025-12-05): I added a minimal `index.html` at the project root to resolve the build issue. After this change:
+- `pnpm build` completed successfully and produced the `dist/` artifacts.
+- `pnpm dev` starts the Vite dev server and serves the app at http://localhost:5173/.
+Remaining items: add a `test` script (e.g., using `vitest`) to enable `pnpm test`.
